@@ -1,6 +1,5 @@
-from agent import agent_executor
+from smartersheet.agent import agent_executor
 import sys
-import random
 
 # Get the argument from the user
 test_type = sys.argv[1]

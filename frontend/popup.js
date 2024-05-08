@@ -1,7 +1,7 @@
 function fetchChatHistory() {
   // Make a request to your backend API to fetch chat history
   // Replace 'YOUR_BACKEND_ENDPOINT' with your actual endpoint
-  fetch('YOUR_BACKEND_ENDPOINT')
+  fetch('http://127.0.0.1:8100/invoke')
     .then(response => response.json())
     .then(data => {
       let chatHistory = document.getElementById('chat-history');
