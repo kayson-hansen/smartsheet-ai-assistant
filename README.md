@@ -11,12 +11,12 @@ to merge columns, to delete rows, to update data, to set automations, to create 
 
 # setup
 
-create an anthropic account, get credits, get api key
+1. create an anthropic account, get credits, get api key
 
-with your smartsheet organizational account, generate an api key
+2. with your smartsheet organizational account, generate an api key
 
-create .env file with ANTHROPIC_API_KEY and SMARTSHEET_API_KEY.
+3. run  `sh setup.sh` to set environment variables and create a .env file with those variables
 
-install all the dependencies in setup.py
+4. run `poetry install` to install dependencies
 
-run app.py to setup the backend api
+5. run `poetry run langchain serve --port=8100` to run the backend server
