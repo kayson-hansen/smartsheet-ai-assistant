@@ -15,9 +15,6 @@ client = smartsheet.Smartsheet(api_key)
 @tool
 def update_cell(sheet_id: int, row_id: int, column_id: int, value: str) -> smartsheet.models.Cell:
     """Update a cell in a Smartsheet sheet using the row id and column id."""
-    sheet = client.Sheets.get_sheet(sheet_id)
-    row = sheet.get_row(row_id)
-
     # Build new cell value
     new_cell = smartsheet.models.Cell()
     new_cell.column_id = column_id
@@ -26,12 +23,8 @@ def update_cell(sheet_id: int, row_id: int, column_id: int, value: str) -> smart
 
     # Build the row to update
     new_row = smartsheet.models.Row()
-    for cell in row.cells:
-        if cell.column_id == column_id:
-            new_row.cells.append(new_cell)
-        else:
-            new_row.cells.append(cell)
     new_row.id = row_id
+    new_row.cells.append(new_cell)
 
     # Update rows
     updated_row = client.Sheets.update_rows(sheet_id, [new_row])
@@ -58,26 +51,19 @@ def get_cell_from_id(sheet_id: int, row_id: int, column_id: int) -> smartsheet.m
 
 
 @tool
-def edit_row(sheet_id: int, row_id: int, data: list) -> smartsheet.models.Row:
-    """Edit a row in a Smartsheet sheet. data is a list of values to update the row with."""
-
-    # Get the sheet
-    sheet = client.Sheets.get_sheet(sheet_id)
-
-    # Get the row
-    row = sheet.get_row(row_id)
-
+def edit_row(sheet_id: int, row_id: int, data: dict) -> smartsheet.models.Row:
+    """Edit a row in a Smartsheet sheet. data is a dict with the column ID as the key and the new
+    cell value as the value."""
     # Create a new row
     new_row = smartsheet.models.Row()
     new_row.id = row_id
 
-    # Update the row
-    for i, cell in enumerate(row.cells):
-        new_cell = smartsheet.models.Cell()
-        new_cell.column_id = cell.column_id
-        new_cell.value = data[i]
-        new_cell.strict = False
-        new_row.cells.append(new_cell)
+    # Add cells to the row
+    for column_id, value in data.items():
+        cell = smartsheet.models.Cell()
+        cell.column_id = int(column_id)
+        cell.value = value
+        new_row.cells.append(cell)
 
     # Update the row
     updated_row = client.Sheets.update_rows(sheet_id, [new_row])
@@ -87,8 +73,8 @@ def edit_row(sheet_id: int, row_id: int, data: list) -> smartsheet.models.Row:
 @tool
 def add_row(sheet_id: int, data: dict) -> dict:
     """Add a new row to a Smartsheet sheet."""
-    sheet = client.Sheets.get_sheet(sheet_id)
     new_row = smartsheet.models.Row()
+    new_row.to_top = True
     for column_id, value in data.items():
         new_row.set_column(column_id, value)
     added_row = client.Sheets.add_rows(sheet_id, [new_row])
@@ -96,9 +82,9 @@ def add_row(sheet_id: int, data: dict) -> dict:
 
 
 @tool
-def delete_row(sheet_id: int, row_id: int) -> None:
-    """Delete a row from a Smartsheet sheet."""
-    client.Sheets.delete_row(sheet_id, row_id)
+def delete_rows(sheet_id: int, row_ids: list[int]) -> None:
+    """Deletes the given rows from a Smartsheet sheet."""
+    client.Sheets.delete_rows(sheet_id, row_ids)
 
 
 @tool
@@ -106,17 +92,6 @@ def get_row(sheet_id: int, row_id: int) -> smartsheet.models.Row:
     """Get a row from a Smartsheet sheet by ID."""
     sheet = client.Sheets.get_sheet(sheet_id)
     return sheet.get_row(row_id)
-
-
-@tool
-def get_row_by_value(sheet_id: int, value: str) -> smartsheet.models.Row:
-    """Get a row from a Smartsheet sheet by the value in the first column."""
-    sheet = client.Sheets.get_sheet(sheet_id)
-    for row in sheet.rows:
-        for cell in row.cells:
-            if cell.value == value:
-                return row
-    raise ValueError(f"Row with value '{value}' not found.")
 
 
 @tool
@@ -196,20 +171,49 @@ def get_sheet_by_name(sheet_name: str) -> smartsheet.models.Sheet:
 
 
 @tool
-def create_sheet(name: str) -> smartsheet.models.Sheet:
+def create_sheet(name: str, folder_id: int = None, template_id: int = None) -> smartsheet.models.Sheet:
     """Create a new Smartsheet sheet."""
-    new_sheet = smartsheet.models.Sheet({
+    sheet_spec = smartsheet.models.Sheet({
         'name': name,
-        'columns': [
-            smartsheet.models.Column({
-                'title': 'Column 1',
-                'type': 'TEXT_NUMBER',
-                'primary': True
-            })
+        'columns': [{
+            'title': 'Favorite',
+            'type': 'CHECKBOX',
+            'symbol': 'STAR'
+        }, {
+            'title': 'Primary Column',
+            'primary': True,
+            'type': 'TEXT_NUMBER'
+        }
         ]
     })
-    created_sheet = client.Sheets.create_sheet(new_sheet)
-    return created_sheet
+
+    if folder_id is not None and template_id is None:
+        # Case 1: Create sheet in folder
+        response = client.Folders.create_sheet_in_folder(folder_id, sheet_spec)
+        new_sheet = response.result
+    elif folder_id is not None and template_id is not None:
+        # Case 2: Create sheet in folder from template
+        response = client.Folders.create_sheet_in_folder_from_template(
+            folder_id,
+            smartsheet.models.Sheet({
+                'name': 'newsheet',
+                'from_id': template_id
+            })
+        )
+    elif folder_id is None and template_id is not None:
+        # Case 3: Create sheet from template
+        response = client.Home.create_sheet_from_template(
+            smartsheet.models.Sheet({
+                'name': 'newsheet',
+                'from_id': template_id
+            })
+        )
+        new_sheet = response.result
+    else:
+        # Case 4: Create new sheet
+        response = client.Home.create_sheet(sheet_spec)
+        new_sheet = response.result
+    return new_sheet
 
 
 @tool
@@ -218,6 +222,6 @@ def delete_sheet(sheet_id: int) -> None:
     client.Sheets.delete_sheet(sheet_id)
 
 
-tools = [update_cell, get_cell_from_idx, get_cell_from_id, edit_row, add_row, delete_row, get_row, get_row_by_value, edit_column,
+tools = [update_cell, get_cell_from_idx, get_cell_from_id, edit_row, add_row, delete_rows, get_row, edit_column,
          add_column, delete_column, get_column, get_column_by_name, get_sheet, get_sheet_by_name, create_sheet,
          delete_sheet]
