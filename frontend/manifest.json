@@ -3,11 +3,11 @@
     "name": "Smartsheet AI Assistant",
     "version": "1.0",
     "permissions": ["activeTab"],
-    "background": {
-      "service_worker": "background.js"
-    },
-    "action": {
-      "default_popup": "popup.html"
-    }
-  }
+    "content_scripts": [
+      {
+      "matches": ["*://*.smartsheet.com/*"],
+      "js": ["content-script.js"]
+      }
+    ]
+}
   

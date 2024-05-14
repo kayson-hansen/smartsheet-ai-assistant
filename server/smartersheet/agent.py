@@ -3,8 +3,8 @@ from dotenv import load_dotenv
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_anthropic import ChatAnthropic
 
-from tools import tools
-from prompt import prompt
+from smartersheet.tools import tools
+from smartersheet.prompt import prompt
 
 load_dotenv()
 api_key = os.getenv("ANTHROPIC_API_KEY")
