@@ -1,51 +1,86 @@
-// Create a chat widget element
-const chatWidget = document.createElement('div');
-chatWidget.style.position = 'fixed';
-chatWidget.style.bottom = '20px';
-chatWidget.style.right = '20px';
-chatWidget.style.width = '60px';
-chatWidget.style.height = '60px';
-chatWidget.style.backgroundColor = 'lightblue';
-chatWidget.style.borderRadius = '50%';
-chatWidget.style.cursor = 'pointer';
+import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 
-// Create a pop-up window element
-const popupWindow = document.createElement('div');
-popupWindow.style.position = 'fixed';
-popupWindow.style.bottom = '100px';
-popupWindow.style.right = '100px';
-popupWindow.style.width = '300px';
-popupWindow.style.height = '400px';
-popupWindow.style.backgroundColor = 'white';
-popupWindow.style.display = 'none';
+const App = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
 
-// Add chat widget to the webpage
-document.body.appendChild(chatWidget);
+  const handleChatClick = () => {
+    setIsOpen(!isOpen);
+  };
 
-// Add event listener to show/hide the pop-up window
-chatWidget.addEventListener('click', () => {
-  if (popupWindow.style.display === 'none') {
-    popupWindow.style.display = 'block';
-  } else {
-    popupWindow.style.display = 'none';
-  }
-});
+  const handleSendMessage = async (messageText) => {
+    // Send message to the API and receive a response
+    const response = await fetch('localhost:8000/invoke', {
+      method: 'POST',
+      body: JSON.stringify({ input: messageText }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    const data = await response.json();
 
-// Add event listener to close the pop-up window when clicking outside
-document.addEventListener('click', (event) => {
-  const target = event.target;
-  if (target !== chatWidget && target !== popupWindow) {
-    popupWindow.style.display = 'none';
-  }
-});
+    // Create a new message bubble with the response text
+    const newMessage = {
+      id: messages.length + 1,
+      text: data.response,
+      user: { id: 'ai', name: 'AI Assistant' },
+    };
 
-// Add chat interface to the pop-up window
-popupWindow.innerHTML = `
-  <div>
-    <h1>Chat Interface</h1>
-    <!-- Add your chat interface code here -->
-  </div>
-`;
+    setMessages([...messages, newMessage]);
+  };
 
-// Add pop-up window to the webpage
-document.body.appendChild(popupWindow);
+  return (
+    <div>
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          width: '60px',
+          height: '60px',
+          backgroundColor: 'lightblue',
+          borderRadius: '50%',
+          cursor: 'pointer',
+        }}
+        onClick={handleChatClick}
+      >
+        Chat
+      </div>
+      {isOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '100px',
+            right: '100px',
+            width: '300px',
+            height: '400px',
+            backgroundColor: 'white',
+          }}
+        >
+          <div>
+            <h1>Chat Interface</h1>
+            <div>
+              {messages.map((message) => (
+                <div key={message.id}>{message.text}</div>
+              ))}
+            </div>
+            <div>
+              <input type="text" />
+              <button onClick={() => handleSendMessage('Hello!')}>
+                Send
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);

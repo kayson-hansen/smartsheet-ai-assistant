@@ -1,2 +1,5 @@
 .env
+frontend/node_modules/
+server/packages/
+server/app/__pycache__
 __pycache__/
